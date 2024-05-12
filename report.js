@@ -1,8 +1,7 @@
 
 function printReport(pages) {
-    let report = sortReport(pages)
-    console.log('report starting...')   
-    
+    console.log('report starting...') 
+    let report = sortReport(pages)    
     for (const [key, value] of Object.entries(report)) {
         console.log(`Found ${value} internal links to ${key}`);
     }
