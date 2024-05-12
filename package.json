@@ -1,8 +1,8 @@
 {
-  "name": "webcrawlerhttp",
+  "name": "seo-link-analyzer",
   "version": "1.0.0",
-  "description": "Project Boots.dev",
-  "main": "main.js",
+  "description": "SEO link analyzer",
+  "type": "module",
   "scripts": {
     "start": "node main.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
@@ -10,16 +10,7 @@
   "jest": {
     "transform": {}
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Lasso2503/webcrawlerhttp.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Lasso2503/webcrawlerhttp/issues"
-  },
-  "homepage": "https://github.com/Lasso2503/webcrawlerhttp#readme",
+  "author": "wagslane",
   "devDependencies": {
     "jest": "^29.7.0"
   },

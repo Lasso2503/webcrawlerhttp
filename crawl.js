@@ -1,71 +1,97 @@
-const { JSDOM } = require('jsdom')
+import { JSDOM } from 'jsdom'
 
+function normalizeURL(url) {
+  const urlObj = new URL(url)
+  let fullPath = `${urlObj.host}${urlObj.pathname}`
+  if (fullPath.slice(-1) === '/') {
+    fullPath = fullPath.slice(0, -1)
+  }
+  return fullPath
+}
 
-function getURLsFromHTML(htmlBody, baseURL){    
-    const dom = new JSDOM(htmlBody);
-    const urls = []
-    const linkElements = dom.window.document.querySelectorAll('a')
-    for (linkElement of linkElements){ 
-        const href = linkElement.href;
-        try{
-            const normalizedURL = normalizeURL(href, baseURL);
-            urls.push(normalizedURL);
-        } catch(err){
-            console.log(`error with relative url: ${err.message}`)
-            continue;
-        }   
-        
+function getURLsFromHTML(html, baseURL) {
+  const urls = []
+  const dom = new JSDOM(html)
+  const anchors = dom.window.document.querySelectorAll('a')
+
+  for (const anchor of anchors) {
+    if (anchor.hasAttribute('href')) {
+      let href = anchor.getAttribute('href')
+
+      try {
+        // convert any relative URLs to absolute URLs
+        href = new URL(href, baseURL).href
+        urls.push(href)
+      } catch(err) {
+        console.log(`${err.message}: ${href}`)
+      }
     }
-    return urls
+  }
+
+  return urls
 }
 
-function isAbsoluteUrl(url) {
-    // Check if URL starts with 'http://', 'https://', or '//'
-    return /^(https?:\/\/|\/\/)/.test(url);
+async function fetchHTML(url) {
+  let res
+  try {
+    res = await fetch(url)
+  } catch (err) {
+    throw new Error(`Got Network error: ${err.message}`)
+  }
+
+  if (res.status > 399) {
+    throw new Error(`Got HTTP error: ${res.status} ${res.statusText}`)
+  }
+
+  const contentType = res.headers.get('content-type')
+  if (!contentType || !contentType.includes('text/html')) {
+    throw new Error(`Got non-HTML response: ${contentType}`)
+  }
+
+  return res.text()
 }
 
+// use default args to prime the first call
+async function crawlPage(baseURL, currentURL = baseURL, pages = {}) {
+  // if this is an offsite URL, bail immediately
+  const currentURLObj = new URL(currentURL)
+  const baseURLObj = new URL(baseURL)
+  if (currentURLObj.hostname !== baseURLObj.hostname) {
+    return pages
+  }
 
-function normalizeURL(urlString, baseURL=''){
+  // use a consistent URL format
+  const normalizedURL = normalizeURL(currentURL)
 
-    let fullUrl = urlString;
+  // if we've already visited this page
+  // just increase the count and don't repeat
+  // the http request
+  if (pages[normalizedURL] > 0) {
+    pages[normalizedURL]++
+    return pages
+  }
 
-    // If the URL is relative, prepend the baseURL
-    if (!isAbsoluteUrl(urlString)) {
-        // Ensure there's no double slash
-        if (baseURL.endsWith('/') && urlString.startsWith('/')) {
-            fullUrl = baseURL.slice(0, -1) + urlString;
-        } else {
-            fullUrl = baseURL + urlString;
-        }
-    } else {
-        // For absolute URLs, prepare to normalize directly
-        fullUrl = urlString;
-    }
-   
-    // Check if baseURL is not provided or empty
-    let urlObj; // Properly scoped now
-    if (baseURL && !isAbsoluteUrl(urlString)) {
-        if(urlString.slice(0,1) !== '/'){
-            console.log('Skipping invalid relative URL:', urlString); // Optional: log or handle invalid URL cases
-        } else {
-            urlObj = new URL(urlString, baseURL); // This constructs a full URL from a relative path using baseURL.
-        }
-    } else {        
-        urlObj = new URL(urlString); // urlString is already absolute.
-    }   
-     
+  // initialize this page in the map
+  // since it doesn't exist yet
+  pages[normalizedURL] = 1
 
+  // fetch and parse the html of the currentURL
+  console.log(`crawling ${currentURL}`)
+  let html = ''
+  try {
+    html = await fetchHTML(currentURL)
+  } catch (err) {
+    console.log(`${err.message}`)
+    return pages
+  }
 
-    let normalized = `${urlObj.hostname}${urlObj.pathname}`.toLowerCase();
-    if (normalized.endsWith('/')) {
-        normalized = normalized.slice(0, -1);
-    }
-   
-    return normalized;
+  // recur through the page's links
+  const nextURLs = getURLsFromHTML(html, baseURL)
+  for (const nextURL of nextURLs) {
+    pages = await crawlPage(baseURL, nextURL, pages)
+  }
+
+  return pages
 }
 
-
-module.exports = {
-    normalizeURL,
-    getURLsFromHTML
-}
+export { normalizeURL, getURLsFromHTML, crawlPage }

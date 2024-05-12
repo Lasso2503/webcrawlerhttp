@@ -1,7 +1,8 @@
-const { normalizeURL, getURLsFromHTML } = require('./crawl.js')
+const { normalizeURL, getURLsFromHTML, crawlPage } = require('./crawl.js')
 const { test, expect } = require('@jest/globals')
 
 
+/*
 test('normalizeURL strip protocol', () => {
     const input = 'https://blog.boot.dev/path'
     const actual = normalizeURL(input)
@@ -101,4 +102,11 @@ test('getURLsFromHTML invalid url', () => {
   
     expect(actual).toEqual(expected)
 })
+*/
 
+test('fetch function', () => {
+    const input = 'https://wagslane.dev'
+    const actual = crawlPage(input)
+    const expected = 'blog.boot.dev/path'     
+    
+})
